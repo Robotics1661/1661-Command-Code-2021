@@ -8,17 +8,19 @@ import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.HorizontalAgitatorSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
+import frc.robot.subsystems.UltrasonicSubsystem;
 import frc.robot.subsystems.VerticalAgitatorSubsystem;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 
 /** An example command that uses an example subsystem. */
-public class ShootHigh extends ParallelCommandGroup {
+public class SmartShootHigh extends ParallelCommandGroup {
   @SuppressWarnings({"PMD.UnusedPrivateField", "PMD.SingularField"})
   private final HorizontalAgitatorSubsystem m_haSubsystem;
   private final VerticalAgitatorSubsystem m_vaSubsystem;
   private final ShooterSubsystem m_shooterSubsystem;
+  private final UltrasonicSubsystem m_ultrasonicSubsystem;
 
   double startTime;
 
@@ -27,12 +29,17 @@ public class ShootHigh extends ParallelCommandGroup {
    *
    * @param subsystem The subsystem used by this command.
    */
-  public ShootHigh(HorizontalAgitatorSubsystem ha, VerticalAgitatorSubsystem va, ShooterSubsystem shooter) {
+  public SmartShootHigh(HorizontalAgitatorSubsystem ha, VerticalAgitatorSubsystem va, ShooterSubsystem shooter, UltrasonicSubsystem ultrasonic) {
     m_haSubsystem = ha;
     m_vaSubsystem = va;
     m_shooterSubsystem = shooter;
+    m_ultrasonicSubsystem = ultrasonic;
     // Use addRequirements() here to declare subsystem dependencies.
-    addRequirements(ha, va, shooter);
+    addRequirements(ha, va, shooter, ultrasonic);
+  }
+
+  private boolean ballNotBlocking() {
+      return m_ultrasonicSubsystem.getDistIn() > 13.3 && m_ultrasonicSubsystem.getDistIn() < 14.3;
   }
 
   // Called when the command is initially scheduled.
@@ -47,8 +54,15 @@ public class ShootHigh extends ParallelCommandGroup {
   @Override
   public void execute() {
     double time = Timer.getFPGATimestamp();
-    if (time - startTime > 2) {
+    if (time - startTime > 3) {
         m_haSubsystem.moveToVA();
+        if (!ballNotBlocking()) {
+            m_haSubsystem.moveFromVA();
+            Timer.delay(.1);
+            m_haSubsystem.stop();
+            Timer.delay(1.4);
+            m_haSubsystem.moveToVA();
+        }
     }
   }
 

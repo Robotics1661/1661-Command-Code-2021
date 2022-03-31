@@ -52,12 +52,12 @@ public class AutoCommand extends ParallelCommandGroup {
   @Override
   public void execute() {
     double time = Timer.getFPGATimestamp();
-    if (time - startTime < 3) {
+    if (time - startTime < 4) {
       m_driveSubsystem.moveSpeed(.4);
       m_vaSubsystem.spinUp();
       m_shooterSubsystem.shoot();
     }
-    else if (time - startTime > 3 && time - startTime < 6) {
+    else if (time - startTime > 4 && time - startTime < 6) {
       m_driveSubsystem.moveSpeed(0);
       m_haSubsystem.moveToVA();
     }

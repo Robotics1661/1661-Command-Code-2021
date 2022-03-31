@@ -8,6 +8,7 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -27,12 +28,15 @@ public class HorizontalAgitatorSubsystem extends SubsystemBase {
     
     horizontalAgitatorRight.setInverted(false);
     horizontalAgitatorLeft.setInverted(false);
+
+
     
   }
 
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
+    
   }
 
   @Override

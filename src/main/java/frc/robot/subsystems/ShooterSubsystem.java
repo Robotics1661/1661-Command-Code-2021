@@ -6,16 +6,18 @@ package frc.robot.subsystems;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
+import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class ShooterSubsystem extends SubsystemBase {
   /** Creates a new ExampleSubsystem. */
 
-  TalonSRX shooter = new TalonSRX(Constants.shooter_motor);
+  TalonFX shooter = new TalonFX(Constants.shooter_motor);
 
   public ShooterSubsystem() {
 
@@ -24,12 +26,25 @@ public class ShooterSubsystem extends SubsystemBase {
     shooter.setSensorPhase(false);
     
     shooter.setInverted(false);
+
+    shooter.config_kP(0, 0.3, Constants.kTimeoutMs);
+
+    SmartDashboard.putNumber("shooterEnc", 0.00);
+    SmartDashboard.putBoolean("shooterEncReset", false);
+
     
   }
 
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
+    if (SmartDashboard.getBoolean("shooterEncReset", false)) {
+			shooter.setSelectedSensorPosition(0);
+			SmartDashboard.putBoolean("shooterEncReset", false);
+		}
+
+    SmartDashboard.putNumber("shooterEnc", shooter.getSelectedSensorPosition());
+    
   }
 
   @Override

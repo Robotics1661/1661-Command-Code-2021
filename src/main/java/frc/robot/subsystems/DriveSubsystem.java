@@ -10,9 +10,14 @@ import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.SupplyCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
+import com.kauailabs.navx.frc.AHRS;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -28,6 +33,10 @@ public class DriveSubsystem extends SubsystemBase {
     MotorControllerGroup right = new MotorControllerGroup(fRight, bRight);
     
     DifferentialDrive tank = new DifferentialDrive(left, right);
+
+    AHRS m_gyro = new AHRS();
+
+    private final DifferentialDriveOdometry m_odometry;
 
     private static final int kPIDLoopIdx = 0;
     private static final int kSlotIdx = 0;
@@ -51,10 +60,10 @@ public class DriveSubsystem extends SubsystemBase {
         bLeft.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, kPIDLoopIdx, Constants.kTimeoutMs);
         bRight.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, kPIDLoopIdx, Constants.kTimeoutMs);
         
-        fRight.setSelectedSensorPosition(0);
-        bRight.setSelectedSensorPosition(0);
-        fLeft.setSelectedSensorPosition(0);
-        bLeft.setSelectedSensorPosition(0);
+        // fRight.setSelectedSensorPosition(0);
+        // bRight.setSelectedSensorPosition(0);
+        // fLeft.setSelectedSensorPosition(0);
+        // bLeft.setSelectedSensorPosition(0);
 
         fLeft.setSensorPhase(false);
         fRight.setSensorPhase(false);
@@ -85,12 +94,63 @@ public class DriveSubsystem extends SubsystemBase {
         fRight.setNeutralMode((NeutralMode.Coast));
         bLeft.setNeutralMode((NeutralMode.Coast));
         bRight.setNeutralMode((NeutralMode.Coast));
+
+        m_odometry = new DifferentialDriveOdometry(m_gyro.getRotation2d());
+
+        // fRight.configPulseWidthPeriod_EdgesPerRot(2048, 0);
+        // fLeft.configPulseWidthPeriod_EdgesPerRot(2048, 0);
+
+        resetEncoders();
+
+        SmartDashboard.putNumber("gyro", 0.00);
+        SmartDashboard.putNumber("velocity", 0.00);
+        SmartDashboard.putNumber("acceleration", 0.00);
+        SmartDashboard.putNumber("rEnc", 0.00);
+        SmartDashboard.putNumber("lEnc", 0.00);
+        SmartDashboard.putBoolean("gyroReset", false);
+        SmartDashboard.putBoolean("rEncReset", false);
+        SmartDashboard.putBoolean("lEncReset", false);
+        SmartDashboard.putNumber("drivedraw", 0);
+
     
   }
 
   @Override
   public void periodic() {
+
+    System.out.println("Right dist: " + (fRight.getSelectedSensorPosition() / 2048) * 2 * Math.PI * Constants.wheel_radius);
+    System.out.println("Left dist: " + (-fLeft.getSelectedSensorPosition() / 2048) * 2 * Math.PI * Constants.wheel_radius);
     // This method will be called once per scheduler run
+    m_odometry.update(
+        m_gyro.getRotation2d(), (fRight.getSelectedSensorPosition() / 2048) * 2 * Math.PI * Constants.wheel_radius, (-fLeft.getSelectedSensorPosition() / 2048) * 2 * Math.PI * Constants.wheel_radius);
+
+    /**
+		 * In this section, the variables that were initialized in robotInit are continuously updated and read from.
+		 * This if statement checks if the gyroReset button was clicked on the dashboard, and reset the gyro if so.
+		 */
+		if (SmartDashboard.getBoolean("gyroReset", false)) {
+			m_gyro.reset();
+			SmartDashboard.putBoolean("gyroReset", false);
+		}
+        if (SmartDashboard.getBoolean("rEncReset", false)) {
+			fRight.setSelectedSensorPosition(0);
+			SmartDashboard.putBoolean("rEncReset", false);
+		}
+        if (SmartDashboard.getBoolean("lEncReset", false)) {
+			fLeft.setSelectedSensorPosition(0);
+			SmartDashboard.putBoolean("lEncReset", false);
+		}
+
+    double totalDriveCurrentDraw = Math.abs(fLeft.getSupplyCurrent()) + Math.abs(fRight.getSupplyCurrent()) + Math.abs(bLeft.getSupplyCurrent()) + Math.abs(bRight.getSupplyCurrent());
+
+    SmartDashboard.putNumber("gyro", m_gyro.getAngle());
+    SmartDashboard.putNumber("acceleration", m_gyro.getAccelFullScaleRangeG());
+    SmartDashboard.putNumber("rEnc", fRight.getSelectedSensorPosition());
+    SmartDashboard.putNumber("lEnc", fLeft.getSelectedSensorPosition());
+    SmartDashboard.putNumber("driveDraw", totalDriveCurrentDraw);
+    double avgVel = (fRight.getSelectedSensorVelocity() + -fLeft.getSelectedSensorVelocity()) / 2;
+    SmartDashboard.putNumber("velocity", avgVel);
+    // System.out.println("Right: " + fRight.getSelectedSensorVelocity());
   }
 
   @Override
@@ -98,10 +158,106 @@ public class DriveSubsystem extends SubsystemBase {
     // This method will be called once per scheduler run during simulation
   }
 
+    /**
+   * Returns the currently-estimated pose of the robot.
+   *
+   * @return The pose.
+   */
+  public Pose2d getPose() {
+    return m_odometry.getPoseMeters();
+  }
+
+    /**
+   * Returns the current wheel speeds of the robot.
+   *
+   * @return The current wheel speeds.
+   */
+  public DifferentialDriveWheelSpeeds getWheelSpeeds() {
+    return new DifferentialDriveWheelSpeeds(fRight.getSelectedSensorVelocity(), -fLeft.getSelectedSensorVelocity());
+  }
+
+    /**
+   * Resets the odometry to the specified pose.
+   *
+   * @param pose The pose to which to set the odometry.
+   */
+  public void resetOdometry(Pose2d pose) {
+    resetEncoders();
+    m_odometry.resetPosition(pose, m_gyro.getRotation2d());
+  }
+
+    /**
+   * Controls the left and right sides of the drive directly with voltages.
+   *
+   * @param leftVolts the commanded left output
+   * @param rightVolts the commanded right output
+   */
+  public void tankDriveVolts(double leftVolts, double rightVolts) {
+    left.setVoltage(leftVolts);
+    right.setVoltage(rightVolts);
+    tank.feed();
+  }
+
+  public void stop() {
+    fRight.set(0);
+    bRight.set(0);
+    fLeft.set(0);
+    bLeft.set(0);
+  }
+
+    /** Resets the drive encoders to currently read a position of 0. */
+    public void resetEncoders() {
+        fRight.setSelectedSensorPosition(0);
+        bRight.setSelectedSensorPosition(0);
+        fLeft.setSelectedSensorPosition(0);
+        bLeft.setSelectedSensorPosition(0);
+    }
+
+    /**
+     * Gets the average distance of the two encoders.
+     *
+     * @return the average of the two encoder readings
+     */
+    public double getAverageEncoderDistance() {
+    return (fRight.getSelectedSensorPosition() + fLeft.getSelectedSensorPosition()) / 2.0;
+    }
+
+    /**
+ * Sets the max output of the drive. Useful for scaling the drive to drive more slowly.
+ *
+ * @param maxOutput the maximum output to which the drive will be constrained
+ */
+    public void setMaxOutput(double maxOutput) {
+        tank.setMaxOutput(maxOutput);
+    }
+
+    /** Zeroes the heading of the robot. */
+    public void zeroHeading() {
+        m_gyro.reset();
+    }
+
+    /**
+     * Returns the heading of the robot.
+     *
+     * @return the robot's heading in degrees, from -180 to 180
+     */
+    public double getHeading() {
+        return m_gyro.getRotation2d().getDegrees();
+    }
+
+    /**
+     * Returns the turn rate of the robot.
+     *
+     * @return The turn rate of the robot, in degrees per second
+     */
+    public double getTurnRate() {
+        return -m_gyro.getRate();
+    }
+
   public void executeTank(double x, double y) {
 
-    System.out.println(x);
-    System.out.println(y);
+    // System.out.println(x);
+    // System.out.println(y);
     
 
     if (Math.abs(y) > 0.1)
@@ -154,8 +310,8 @@ public class DriveSubsystem extends SubsystemBase {
    *  <p>Slowly turns the robot right.</p>
   */
   public void turnSlightlyRight() {
-      t_left = 0.3;
-      t_right = 0.3;
+      t_left = 0.4;
+      t_right = 0.4;
       speedL = t_left + skim(t_right);
       speedR = t_right + skim(t_left);
       tank.tankDrive(speedL, speedR);
@@ -165,8 +321,8 @@ public class DriveSubsystem extends SubsystemBase {
    *  <p>Slowly turns the robot left.</p>
   */
   public void turnSlightlyLeft() {
-      t_left = -0.3;
-      t_right = -0.3;
+      t_left = -0.4;
+      t_right = -0.4;
       speedL = t_left + skim(t_right);
       speedR = t_right + skim(t_left);
       tank.tankDrive(speedL, speedR);

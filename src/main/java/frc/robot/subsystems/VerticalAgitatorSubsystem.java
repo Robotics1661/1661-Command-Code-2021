@@ -8,6 +8,7 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -31,12 +32,22 @@ public class VerticalAgitatorSubsystem extends SubsystemBase {
     verticalAgitatorRight.setInverted(false);
     verticalAgitatorLeft.setInverted(false);
     verticalAgitatorFront.setInverted(false);
+  
     
+    SmartDashboard.putNumber("vaEnc", 0.00);
+    SmartDashboard.putBoolean("vaEncReset", false);
+
   }
 
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
+    if (SmartDashboard.getBoolean("vaEncReset", false)) {
+			verticalAgitatorRight.setSelectedSensorPosition(0);
+			SmartDashboard.putBoolean("vaEncReset", false);
+		}
+
+    SmartDashboard.putNumber("vaEnc", verticalAgitatorRight.getSelectedSensorPosition());
   }
 
   @Override
@@ -45,9 +56,15 @@ public class VerticalAgitatorSubsystem extends SubsystemBase {
   }
 
   public void spinUp() {
-    verticalAgitatorRight.set(ControlMode.PercentOutput, .99);
-    verticalAgitatorLeft.set(ControlMode.PercentOutput, -.99);
-    verticalAgitatorFront.set(ControlMode.PercentOutput, .99);
+    verticalAgitatorRight.set(ControlMode.PercentOutput, .90);
+    verticalAgitatorLeft.set(ControlMode.PercentOutput, -.90);
+    verticalAgitatorFront.set(ControlMode.PercentOutput, .90);
+}
+
+public void spinVariable(double v) {
+  verticalAgitatorRight.set(ControlMode.PercentOutput, -v);
+  verticalAgitatorLeft.set(ControlMode.PercentOutput, v);
+  verticalAgitatorFront.set(ControlMode.PercentOutput, -v);
 }
 
 public void spinDown() {

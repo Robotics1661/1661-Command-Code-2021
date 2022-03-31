@@ -4,31 +4,26 @@
 
 package frc.robot.commands;
 
-import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.HorizontalAgitatorSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
-import frc.robot.subsystems.VisionSubsystem;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 
 /** An example command that uses an example subsystem. */
-public class FindTarget extends ParallelCommandGroup {
+public class RunHorizontalAgitator extends ParallelCommandGroup {
   @SuppressWarnings({"PMD.UnusedPrivateField", "PMD.SingularField"})
-  private final DriveSubsystem m_driveSubsystem;
-  private final VisionSubsystem m_visionSubsystem;
+  private final HorizontalAgitatorSubsystem m_haSubsystem;
 
   /**
    * Creates a new ExampleCommand.
    *
    * @param subsystem The subsystem used by this command.
    */
-  public FindTarget(DriveSubsystem drive, VisionSubsystem vision) {
-    m_driveSubsystem = drive;
-    m_visionSubsystem = vision;
-
+  public RunHorizontalAgitator(HorizontalAgitatorSubsystem ha) {
+    m_haSubsystem = ha;
     // Use addRequirements() here to declare subsystem dependencies.
-    addRequirements(drive, vision);
+    addRequirements(ha);
   }
 
   // Called when the command is initially scheduled.
@@ -40,23 +35,13 @@ public class FindTarget extends ParallelCommandGroup {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    double x = m_visionSubsystem.getLimelightX();
-    double valid = m_visionSubsystem.getLimelightValid();
-    
-    if (x > 3.0) {
-        m_driveSubsystem.turnSlightlyRight();
-      }
-      else if (x < -3.0) {
-        m_driveSubsystem.turnSlightlyLeft();
-      }
-      else if (valid == Math.abs(0.0)) {
-        m_driveSubsystem.turn(0.6);
-      }
+    m_haSubsystem.moveToVA();
   }
 
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
+      m_haSubsystem.stop();
   }
 
   // Returns true when the command should end.
